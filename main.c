@@ -1,13 +1,16 @@
 #include "raylib.h"
-#include <stdlib.h>  
+#include <stdlib.h>
 
 #define LARGURA       800
 #define ALTURA        450
 #define CHAO_Y        420     
-#define VEL_CENARIO   250.0f   
-#define SOBE         -1100.0f  
+
+#define VEL_X_INICIAL 250.0f
+#define VEL_X_MAXIMA  750.0f
+
+#define SOBE         -1400.0f  
 #define DESCE         900.0f   
-#define VEL_MAXIMA    380.0f   
+#define VEL_MAXIMA    550.0f   
 
 typedef struct Elemento {
     Rectangle caixa;            
@@ -24,18 +27,18 @@ Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
     return novo;                          
 }
 
-Elemento *atualizar(Elemento *inicio, float dt)
+Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 {
     Elemento *anterior = NULL;
     Elemento *atual = inicio;
 
     while (atual != NULL) {
-        atual->caixa.x -= VEL_CENARIO * dt;
+        atual->caixa.x -= vel_cenario * dt;
 
         if (atual->caixa.x + atual->caixa.width < 0) {
             Elemento *remover = atual;
             if (anterior == NULL) inicio = atual->prox;   
-            else anterior->prox = atual->prox;           
+            else anterior->prox = atual->prox;            
             atual = atual->prox;
             free(remover);
         } else {
@@ -53,7 +56,6 @@ int colidiu(Elemento *inicio, Rectangle galinha)
     }
     return 0;
 }
-
 
 void desenhar_lista(Elemento *inicio)
 {
@@ -80,18 +82,33 @@ int main(void)
 
     Elemento *lista = NULL;                
     Rectangle galinha = { 100, 200, 40, 40 };
+    
     float vel_y = 0;
-    float deslocamento = 0;       
-    float timer = 0;                   
+    float deslocamento = 0;        
+    float timer = 0;                    
     int morreu = 0;
+    
+    float tempo_jogado = 0;
+    float vel_cenario = VEL_X_INICIAL;
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
+        
         if (!morreu) {
+            tempo_jogado += dt;
+            
+            if (tempo_jogado <= 45.0f) {
+                vel_cenario = VEL_X_INICIAL + ((VEL_X_MAXIMA - VEL_X_INICIAL) * (tempo_jogado / 45.0f));
+            } else {
+                vel_cenario = VEL_X_MAXIMA;
+            }
+
             if (IsKeyDown(KEY_SPACE)) vel_y += SOBE * dt;
             else vel_y += DESCE * dt;
+            
             if (vel_y >  VEL_MAXIMA) vel_y =  VEL_MAXIMA;
             if (vel_y < -VEL_MAXIMA) vel_y = -VEL_MAXIMA;
+            
             galinha.y += vel_y * dt;
 
             if (galinha.y < 0) { galinha.y = 0; vel_y = 0; }
@@ -100,8 +117,9 @@ int main(void)
                 vel_y = 0;
             }
 
-            deslocamento += VEL_CENARIO * dt;
+            deslocamento += vel_cenario * dt;
             timer += dt;
+            
             if (timer >= 1.6f) {
                 float alt = (float) GetRandomValue(70, 150);
                 float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
@@ -109,12 +127,14 @@ int main(void)
                 timer = 0;
             }
 
-            lista = atualizar(lista, dt);
+            lista = atualizar(lista, dt, vel_cenario);
             morreu = colidiu(lista, galinha);
         }
+        
         BeginDrawing();
         ClearBackground(SKYBLUE);
         DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
+        
         int desloc_cerca = (int) deslocamento % 100;
         for (int i = -1; i <= LARGURA / 100 + 1; i++) {
             DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, BROWN);
@@ -129,6 +149,7 @@ int main(void)
         }
         EndDrawing();
     }
+    
     lista = liberar_lista(lista); 
     CloseWindow();
     return 0;
