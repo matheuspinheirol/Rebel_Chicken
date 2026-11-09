@@ -1,3 +1,7 @@
-rebel-chicken
-cli-lib/cli-lib-example
-jogo
+# Programas compilados
+*.exe
+*.o
+rebel_chicken
+
+# VS Code
+.vscode/
