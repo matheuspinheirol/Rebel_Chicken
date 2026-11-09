@@ -1,2 +1,2 @@
 # Rebel_Chicken
-Jogo feito em C, com tema central na fuga de uma galinha da fazenda, com obstáculos que vão aumentando a dificuldade ao longo do tempo.
+Jogo feito em C cujo tema central é a fuga de uma galinha da fazenda, contendo obstáculos que vão aumentando sua dificuldade ao longo do tempo.
