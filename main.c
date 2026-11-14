@@ -12,6 +12,45 @@
 #define DESCE         900.0f   
 #define VEL_MAXIMA    550.0f   
 
+
+#define SPRITE_LARG   12
+#define SPRITE_ALT    12
+#define ESCALA_SPRITE 3    
+
+
+int sprite_galinha[SPRITE_ALT][SPRITE_LARG] = {
+    {0,0,0,0,0,0,2,2,0,0,0,0},
+    {0,0,0,0,0,2,2,2,2,0,0,0},
+    {0,0,0,0,0,1,1,1,1,1,0,0},
+    {0,0,0,0,0,1,1,4,1,3,3,0},
+    {0,0,0,0,0,1,1,1,2,3,0,0},
+    {0,0,1,1,1,1,1,1,1,1,0,0},
+    {0,1,1,1,1,1,1,1,1,1,0,0},
+    {1,1,1,1,1,1,1,1,1,1,0,0},
+    {0,1,1,1,1,1,1,1,1,0,0,0},
+    {0,0,1,1,1,1,1,1,0,0,0,0},
+    {0,0,0,0,0,3,0,3,0,0,0,0},
+    {0,0,0,0,0,3,3,3,3,0,0,0}
+};
+
+void desenhar_galinha(int x, int y)
+{
+    Color cores[5] = { BLANK, WHITE, RED, ORANGE, BLACK };
+
+    for (int linha = 0; linha < SPRITE_ALT; linha++) {
+        for (int coluna = 0; coluna < SPRITE_LARG; coluna++) {
+            int valor = sprite_galinha[linha][coluna];
+            if (valor != 0) {
+                DrawRectangle(x + coluna * ESCALA_SPRITE,
+                              y + linha * ESCALA_SPRITE,
+                              ESCALA_SPRITE, ESCALA_SPRITE,
+                              cores[valor]);
+            }
+        }
+    }
+}
+// ---------------------------------------
+
 typedef struct Elemento {
     Rectangle caixa;            
     struct Elemento *prox;
@@ -81,7 +120,7 @@ int main(void)
     SetTargetFPS(60);
 
     Elemento *lista = NULL;                
-    Rectangle galinha = { 100, 200, 40, 40 };
+    Rectangle galinha = { 100, 200, 36, 36 };  
     
     float vel_y = 0;
     float deslocamento = 0;        
@@ -141,8 +180,8 @@ int main(void)
         }
 
         desenhar_lista(lista);
-        DrawRectangleRec(galinha, WHITE);            
-        DrawRectangleLinesEx(galinha, 2, ORANGE);
+        desenhar_galinha((int) galinha.x, (int) galinha.y);
+
 
         if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
