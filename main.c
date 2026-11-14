@@ -49,7 +49,7 @@ void desenhar_galinha(int x, int y)
         }
     }
 }
-// ---------------------------------------
+
 
 typedef struct Elemento {
     Rectangle caixa;            
