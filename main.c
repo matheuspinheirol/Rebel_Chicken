@@ -49,7 +49,7 @@ void desenhar_galinha(int x, int y)
         }
     }
 }
-
+// ---------------------------------------
 
 typedef struct Elemento {
     Rectangle caixa;            
@@ -169,8 +169,19 @@ int main(void)
             lista = atualizar(lista, dt, vel_cenario);
             morreu = colidiu(lista, galinha);
         }
-        
+        else if (IsKeyPressed(KEY_R)) {
+            lista = liberar_lista(lista);
+            galinha.y = 200;
+            vel_y = 0;
+            deslocamento = 0;
+            timer = 0;
+            tempo_jogado = 0;
+            vel_cenario = VEL_X_INICIAL;
+            morreu = 0;
+        }
+
         BeginDrawing();
+        
         ClearBackground(SKYBLUE);
         DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
         
@@ -183,8 +194,9 @@ int main(void)
         desenhar_galinha((int) galinha.x, (int) galinha.y);
 
 
-        if (morreu) {
+         if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
+            DrawText("Pressione R para reiniciar", LARGURA / 2 - 130, ALTURA / 2 + 30, 20, DARKGRAY);
         }
         EndDrawing();
     }
