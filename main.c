@@ -49,7 +49,7 @@ void desenhar_galinha(int x, int y)
         }
     }
 }
-// ---------------------------------------
+
 
 typedef struct Elemento {
     Rectangle caixa;            
@@ -129,6 +129,7 @@ int main(void)
     
     float tempo_jogado = 0;
     float vel_cenario = VEL_X_INICIAL;
+    int pontos = 0;
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
@@ -157,6 +158,7 @@ int main(void)
             }
 
             deslocamento += vel_cenario * dt;
+            pontos = (int)(deslocamento / 100);
             timer += dt;
             
             if (timer >= 1.6f) {
@@ -174,6 +176,7 @@ int main(void)
             galinha.y = 200;
             vel_y = 0;
             deslocamento = 0;
+            pontos = 0;
             timer = 0;
             tempo_jogado = 0;
             vel_cenario = VEL_X_INICIAL;
@@ -192,10 +195,11 @@ int main(void)
 
         desenhar_lista(lista);
         desenhar_galinha((int) galinha.x, (int) galinha.y);
-
+        DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
 
          if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
+            DrawText(TextFormat("Sua pontuacao: %d", pontos), LARGURA / 2 - 110, ALTURA / 2 + 60, 22, BLACK);
             DrawText("Pressione R para reiniciar", LARGURA / 2 - 130, ALTURA / 2 + 30, 20, DARKGRAY);
         }
         EndDrawing();
