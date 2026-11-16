@@ -12,10 +12,14 @@
 #define DESCE         900.0f   
 #define VEL_MAXIMA    550.0f   
 
-
 #define SPRITE_LARG   12
 #define SPRITE_ALT    12
-#define ESCALA_SPRITE 3    
+#define ESCALA_SPRITE 3  
+
+
+#define MILHO_LARG 16
+#define MILHO_ALT 24
+#define PASSO_MILHO 30
 
 
 int sprite_galinha[SPRITE_ALT][SPRITE_LARG] = {
@@ -50,6 +54,33 @@ void desenhar_galinha(int x, int y)
     }
 }
 
+void desenhar_triangulo(Vector2 a, Vector2 b, Vector2 c, Color cor)
+{
+    float cruz = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    if (cruz < 0) DrawTriangle(a, b, c, cor);
+    else          DrawTriangle(a, c, b, cor);
+}
+
+oid desenhar_milho(Rectangle r)
+{
+    int x = (int) r.x, y = (int) r.y;
+    int cx = x + MILHO_LARG / 2;
+    Color grao = (Color){ 205, 133, 0, 255 };               // dourado escuro
+
+    DrawEllipse(cx, y + 10, 6, 10, GOLD);                   // espiga
+    for (int i = 0; i < 3; i++) {                           // linhas de graos
+        DrawLine(cx - 5, y + 5 + i * 5, cx + 5, y + 5 + i * 5, grao);
+    }
+    DrawLine(cx, y + 1, cx, y + 19, grao);
+
+    // palha: duas folhas verdes saindo da base
+    desenhar_triangulo((Vector2){ cx, y + 24 },
+                       (Vector2){ cx - 8, y + 9 },
+                       (Vector2){ cx - 1, y + 13 }, DARKGREEN);
+    desenhar_triangulo((Vector2){ cx, y + 24 },
+                       (Vector2){ cx + 8, y + 9 },
+                       (Vector2){ cx + 1, y + 13 }, GREEN);
+}
 
 typedef struct Elemento {
     Rectangle caixa;            
