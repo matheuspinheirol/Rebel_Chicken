@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #define LARGURA       800
 #define ALTURA        450
@@ -20,6 +21,53 @@
 #define MILHO_LARG 16
 #define MILHO_ALT 24
 #define PASSO_MILHO 30
+
+#define MAX_SCORES     5
+#define ARQUIVO_SCORES "top_scores.txt"
+
+int carregar_scores(int scores[])
+{
+    FILE *arq = fopen(ARQUIVO_SCORES, "r");
+    int qtd = 0;
+
+    if (arq == NULL) return 0;  
+
+    while (qtd < MAX_SCORES && fscanf(arq, "%d", &scores[qtd]) == 1) {
+        qtd++;
+    }
+
+    fclose(arq);
+    return qtd;
+}
+
+void salvar_scores(int scores[], int qtd){
+
+    FILE *arq = fopen(ARQUIVO_SCORES, "w");  
+    if (arq == NULL) return;
+
+    for (int i = 0; i < qtd; i++) {
+        fprintf(arq, "%d\n", scores[i]);
+    }
+
+    fclose(arq);
+}
+
+void registrar_score(int scores[], int *qtd, int pontos){
+    int pos = 0;
+    while (pos < *qtd && scores[pos] >= pontos) pos++;
+
+    if (pos >= MAX_SCORES) return;   
+
+    int fim = (*qtd < MAX_SCORES) ? *qtd : MAX_SCORES - 1;
+    for (int i = fim; i > pos; i--) {
+        scores[i] = scores[i - 1];
+    }
+
+    scores[pos] = pontos;
+    if (*qtd < MAX_SCORES) (*qtd)++;
+
+    salvar_scores(scores, *qtd);
+}
 
 
 int sprite_galinha[SPRITE_ALT][SPRITE_LARG] = {
@@ -61,19 +109,18 @@ void desenhar_triangulo(Vector2 a, Vector2 b, Vector2 c, Color cor)
     else          DrawTriangle(a, c, b, cor);
 }
 
-oid desenhar_milho(Rectangle r)
+void desenhar_milho(Rectangle r)
 {
     int x = (int) r.x, y = (int) r.y;
     int cx = x + MILHO_LARG / 2;
-    Color grao = (Color){ 205, 133, 0, 255 };               // dourado escuro
+    Color grao = (Color){ 205, 133, 0, 255 };               
 
-    DrawEllipse(cx, y + 10, 6, 10, GOLD);                   // espiga
-    for (int i = 0; i < 3; i++) {                           // linhas de graos
+    DrawEllipse(cx, y + 10, 6, 10, GOLD);                   
+    for (int i = 0; i < 3; i++) {                           
         DrawLine(cx - 5, y + 5 + i * 5, cx + 5, y + 5 + i * 5, grao);
     }
     DrawLine(cx, y + 1, cx, y + 19, grao);
 
-    // palha: duas folhas verdes saindo da base
     desenhar_triangulo((Vector2){ cx, y + 24 },
                        (Vector2){ cx - 8, y + 9 },
                        (Vector2){ cx - 1, y + 13 }, DARKGREEN);
@@ -162,6 +209,9 @@ int main(void)
     float vel_cenario = VEL_X_INICIAL;
     int pontos = 0;
 
+    int scores[MAX_SCORES];
+    int qtd_scores = carregar_scores(scores);
+
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
         
@@ -201,6 +251,9 @@ int main(void)
 
             lista = atualizar(lista, dt, vel_cenario);
             morreu = colidiu(lista, galinha);
+            if (morreu) {
+                registrar_score(scores, &qtd_scores, pontos);
+            }
         }
         else if (IsKeyPressed(KEY_R)) {
             lista = liberar_lista(lista);
@@ -232,6 +285,11 @@ int main(void)
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
             DrawText(TextFormat("Sua pontuacao: %d", pontos), LARGURA / 2 - 110, ALTURA / 2 + 60, 22, BLACK);
             DrawText("Pressione R para reiniciar", LARGURA / 2 - 130, ALTURA / 2 + 30, 20, DARKGRAY);
+            DrawText("TOP 5", LARGURA / 2 - 110, ALTURA / 2 + 90, 18, BLACK);
+         for (int i = 0; i < qtd_scores; i++) {
+            DrawText(TextFormat("%d. %d", i + 1, scores[i]),
+                    LARGURA / 2 - 110, ALTURA / 2 + 112 + i * 20, 18, DARKGRAY);
+        }
         }
         EndDrawing();
     }
