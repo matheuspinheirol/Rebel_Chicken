@@ -8,7 +8,7 @@
 #define VEL_X_INICIAL 250.0f
 #define VEL_X_MAXIMA  750.0f
 
-#define SOBE         -1400.0f  
+#define SOBE         -1300.0f  
 #define DESCE         900.0f   
 #define VEL_MAXIMA    550.0f   
 
