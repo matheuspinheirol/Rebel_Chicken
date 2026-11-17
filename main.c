@@ -25,6 +25,11 @@
 
 #define FALCAO_LARG 56
 #define FALCAO_ALT  28
+#define FALCAO_VEL_EXTRA 200.0f
+#define AVISO_TEMPO      1.2f
+#define GAP_FALCAO         8
+#define MAX_FALCOES        6
+#define SEGUNDOS_POR_NIVEL 20.0f
 
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
@@ -136,29 +141,53 @@ void desenhar_milho(Rectangle r)
 void desenhar_falcao(Rectangle r)
 {
     int x = (int) r.x, y = (int) r.y, w = (int) r.width;
-    float bater = sinf((float) GetTime() * 16.0f);          // -1 .. 1
+    float bater = sinf((float) GetTime() * 16.0f);
 
-    // cauda (atras = lado direito)
     desenhar_triangulo((Vector2){ x + w - 12, y + 15 },
                        (Vector2){ x + w + 6,  y + 9 },
                        (Vector2){ x + w + 6,  y + 23 }, DARKBROWN);
-    // asa batendo (varrida para tras)
     desenhar_triangulo((Vector2){ x + 22, y + 15 },
                        (Vector2){ x + 46, y + 15 },
                        (Vector2){ x + 44, y + 14 - 18 * bater }, BROWN);
-    // corpo e peito claro
     DrawEllipse(x + 32, y + 17, 24, 9, BROWN);
     DrawEllipse(x + 30, y + 20, 16, 5, BEIGE);
-    // cabeca
     DrawCircle(x + 13, y + 13, 9, DARKBROWN);
-    // bico (aponta para a esquerda)
     desenhar_triangulo((Vector2){ x - 3, y + 14 },
                        (Vector2){ x + 6, y + 10 },
                        (Vector2){ x + 6, y + 18 }, GOLD);
-    // olho bravo
     DrawCircle(x + 11, y + 11, 3, WHITE);
     DrawCircle(x + 10, y + 11, 1.5f, BLACK);
     DrawLine(x + 6, y + 5, x + 15, y + 9, BLACK);
+}
+
+void desenhar_alerta(float faixa_y, float faixa_alt, int qtd, float tempo)
+{
+    float pulso = sinf(tempo * 18.0f);
+    float brilho = pulso * 0.5f + 0.5f;
+
+    DrawRectangle(0, (int) faixa_y - 4, LARGURA, (int) faixa_alt + 8,
+                  Fade(RED, 0.15f + 0.25f * brilho));
+
+    float s = 30 + 4 * pulso;
+    float cx = LARGURA - 55;
+    float cy = faixa_y + faixa_alt / 2;
+    if (cy < s + 16) cy = s + 16;
+    if (cy > CHAO_Y - s - 16) cy = CHAO_Y - s - 16;
+
+    float tam[3]  = { s + 12, s + 8, s };
+    Color cor[3]  = { BLACK, RED, YELLOW };
+    for (int i = 0; i < 3; i++) {
+        desenhar_triangulo((Vector2){ cx, cy - tam[i] },
+                           (Vector2){ cx - tam[i], cy + tam[i] * 0.85f },
+                           (Vector2){ cx + tam[i], cy + tam[i] * 0.85f }, cor[i]);
+    }
+    DrawText("!", (int)(cx - MeasureText("!", 30) / 2), (int)(cy - s * 0.35f), 30, BLACK);
+
+    const char *texto = (qtd > 1) ? "FALCOES!" : "FALCAO!";
+    int larg_txt = MeasureText(texto, 26);
+    int tx = (int)(cx - s - 24 - larg_txt);
+    DrawText(texto, tx + 2, (int) cy - 11, 26, BLACK);
+    DrawText(texto, tx,     (int) cy - 13, 26, RED);
 }
 
 typedef enum { OBSTACULO, MILHO, FALCAO } TipoElemento;
@@ -186,6 +215,15 @@ Elemento *inserir_falcao(Elemento *inicio, float x, float y)
     if (novo != inicio) novo->tipo = FALCAO;
     return novo;
 }
+Elemento *criar_onda_falcoes(Elemento *lista, float faixa_y, int qtd)
+{
+    for (int i = 0; i < qtd; i++) {
+        float x = LARGURA + 20 + (i % 2) * 40;      // zigue-zague para não ficar uma parede reta
+        float y = faixa_y + i * (FALCAO_ALT + GAP_FALCAO);
+        lista = inserir_falcao(lista, x, y);
+    }
+    return lista;
+}
 
 Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 {
@@ -193,8 +231,9 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
     Elemento *atual = inicio;
 
     while (atual != NULL) {
-        float multiplicador = (atual->tipo == FALCAO) ? 1.35f : 1.0f;
-        atual->caixa.x -= vel_cenario * multiplicador * dt;
+        float vel = vel_cenario;
+        if (atual->tipo == FALCAO) vel += FALCAO_VEL_EXTRA;
+        atual->caixa.x -= vel * dt;
 
         if (atual->caixa.x + atual->caixa.width < 0) {
             Elemento *remover = atual;
@@ -213,9 +252,14 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 int colidiu(Elemento *inicio, Rectangle galinha)
 {
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
-        if ((p->tipo == OBSTACULO || p->tipo == FALCAO) && CheckCollisionRecs(galinha, p->caixa)) {
-            return 1;
+        if (p->tipo == MILHO) continue;
+
+        Rectangle caixa = p->caixa;
+        if (p->tipo == FALCAO) {
+            caixa.y += 4;
+            caixa.height -= 8;
         }
+        if (CheckCollisionRecs(galinha, caixa)) return 1;
     }
     return 0;
 }
@@ -225,12 +269,13 @@ void desenhar_lista(Elemento *inicio)
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
         if (p->tipo == MILHO) {
             desenhar_milho(p->caixa);
-        } else if (p->tipo == FALCAO) {
-            desenhar_falcao(p->caixa);
-        } else {
+        } else if (p->tipo == OBSTACULO) {
             DrawRectangleRec(p->caixa, DARKGRAY);
             DrawRectangleLinesEx(p->caixa, 2, BLACK);
         }
+    }
+    for (Elemento *p = inicio; p != NULL; p = p->prox) {
+        if (p->tipo == FALCAO) desenhar_falcao(p->caixa);
     }
 }
 
@@ -350,6 +395,10 @@ int main(void)
 
     float timer_falcao = 0;
     float intervalo_falcao = 3.2f;
+    int   aviso_ativo = 0;
+    float aviso_timer = 0;
+    float faixa_y = 0, faixa_alt = 0;
+    int   qtd_falcoes = 1;
 
     int scores[MAX_SCORES];
     int qtd_scores = carregar_scores(scores);
@@ -397,16 +446,28 @@ int main(void)
             }
 
             timer_falcao += dt;
-            if (timer_falcao >= intervalo_falcao) {
-                for (int tentativa = 0; tentativa < 10; tentativa++) {
-                    float y = (float) GetRandomValue(20, CHAO_Y - FALCAO_ALT - 20);
-                    if (area_livre(lista, (Rectangle){ LARGURA, y, FALCAO_LARG, FALCAO_ALT })) {
-                        lista = inserir_falcao(lista, LARGURA, y);
-                        break;
-                    }
+            if (!aviso_ativo && timer_falcao >= intervalo_falcao) {
+                aviso_ativo = 1;
+                aviso_timer = 0;
+
+                int nivel = (int)(tempo_jogado / SEGUNDOS_POR_NIVEL);
+                int max_qtd = 1 + nivel;
+                if (max_qtd > MAX_FALCOES) max_qtd = MAX_FALCOES;
+                qtd_falcoes = GetRandomValue(1, max_qtd);
+
+                faixa_alt = (float)(qtd_falcoes * FALCAO_ALT + (qtd_falcoes - 1) * GAP_FALCAO);
+                faixa_y = galinha.y + galinha.height / 2 - faixa_alt / 2;
+                if (faixa_y < 0) faixa_y = 0;
+                if (faixa_y + faixa_alt > CHAO_Y) faixa_y = CHAO_Y - faixa_alt;
+            }
+            if (aviso_ativo) {
+                aviso_timer += dt;
+                if (aviso_timer >= AVISO_TEMPO) {
+                    lista = criar_onda_falcoes(lista, faixa_y, qtd_falcoes);
+                    aviso_ativo = 0;
+                    timer_falcao = 0;
+                    intervalo_falcao = (float) GetRandomValue(22, 42) / 10.0f;
                 }
-                timer_falcao = 0;
-                intervalo_falcao = (float) GetRandomValue(22, 42) / 10.0f;
             }
 
             timer_milho += dt;
@@ -442,6 +503,8 @@ int main(void)
             intervalo_milho = 2.5f;
             timer_falcao = 0;
             intervalo_falcao = 3.2f;
+            aviso_ativo = 0;
+            aviso_timer = 0;
         }
 
         BeginDrawing();
@@ -455,6 +518,7 @@ int main(void)
         }
 
         desenhar_lista(lista);
+        if (!morreu && aviso_ativo) desenhar_alerta(faixa_y, faixa_alt, qtd_falcoes, aviso_timer);
         desenhar_galinha((int) galinha.x, (int) galinha.y);
         DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
         DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
