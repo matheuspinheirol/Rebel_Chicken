@@ -21,6 +21,7 @@
 #define MILHO_LARG 16
 #define MILHO_ALT 24
 #define PASSO_MILHO 30
+#define PONTOS_POR_MILHO 10
 
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
@@ -129,7 +130,10 @@ void desenhar_milho(Rectangle r)
                        (Vector2){ cx + 1, y + 13 }, GREEN);
 }
 
+typedef enum { OBSTACULO, MILHO } TipoElemento;
+
 typedef struct Elemento {
+    TipoElemento tipo;          
     Rectangle caixa;            
     struct Elemento *prox;
 } Elemento;
@@ -140,6 +144,7 @@ Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
     if (novo == NULL) return inicio;      
 
     novo->caixa = (Rectangle){ x, y, larg, alt };
+    novo->tipo = OBSTACULO;               
     novo->prox = inicio;                  
     return novo;                          
 }
@@ -169,7 +174,7 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 int colidiu(Elemento *inicio, Rectangle galinha)
 {
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
-        if (CheckCollisionRecs(galinha, p->caixa)) return 1;
+        if (p->tipo == OBSTACULO && CheckCollisionRecs(galinha, p->caixa)) return 1;
     }
     return 0;
 }
@@ -177,8 +182,12 @@ int colidiu(Elemento *inicio, Rectangle galinha)
 void desenhar_lista(Elemento *inicio)
 {
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
-        DrawRectangleRec(p->caixa, DARKGRAY);
-        DrawRectangleLinesEx(p->caixa, 2, BLACK);
+        if (p->tipo == MILHO) {
+            desenhar_milho(p->caixa);
+        } else {
+            DrawRectangleRec(p->caixa, DARKGRAY);
+            DrawRectangleLinesEx(p->caixa, 2, BLACK);
+        }
     }
 }
 
@@ -190,6 +199,90 @@ Elemento *liberar_lista(Elemento *inicio)
         inicio = proximo;
     }
     return NULL;
+}
+
+Rectangle com_folga(Rectangle r)
+{
+    float folga = 10;
+    return (Rectangle){ r.x - folga, r.y - folga,
+                        r.width + 2 * folga, r.height + 2 * folga };
+}
+
+int area_livre(Elemento *lista, Rectangle area)
+{
+    Rectangle a = com_folga(area);
+    for (Elemento *p = lista; p != NULL; p = p->prox) {
+        if (CheckCollisionRecs(a, com_folga(p->caixa))) return 0;
+    }
+    return 1;
+}
+
+Elemento *inserir_milho(Elemento *inicio, float x, float y)
+{
+    Elemento *nova = inserir(inicio, x, y, MILHO_LARG, MILHO_ALT);
+    if (nova != inicio) nova->tipo = MILHO;
+    return nova;
+}
+
+Elemento *coletar_milho(Elemento *inicio, Rectangle galinha, int *milho)
+{
+    Elemento *anterior = NULL;
+    Elemento *atual = inicio;
+
+    while (atual != NULL) {
+        if (atual->tipo == MILHO && CheckCollisionRecs(galinha, atual->caixa)) {
+            (*milho)++;
+            Elemento *remover = atual;
+            if (anterior == NULL) inicio = atual->prox;   
+            else anterior->prox = atual->prox;            
+            atual = atual->prox;
+            free(remover);
+        } else {
+            anterior = atual;
+            atual = atual->prox;
+        }
+    }
+    return inicio;
+}
+
+Elemento *criar_bloco_milho(Elemento *lista, int colunas, int linhas)
+{
+    float larg_bloco = (float)((colunas - 1) * PASSO_MILHO + MILHO_LARG);
+    float alt_bloco  = (float)((linhas  - 1) * PASSO_MILHO + MILHO_ALT);
+
+    for (int tentativa = 0; tentativa < 10; tentativa++) {
+        float y = (float) GetRandomValue(20, (int)(CHAO_Y - alt_bloco - 10));
+        Rectangle area = { LARGURA, y, larg_bloco, alt_bloco };
+
+        if (area_livre(lista, area)) {
+            for (int i = 0; i < linhas; i++) {          
+                for (int j = 0; j < colunas; j++) {     
+                    lista = inserir_milho(lista,
+                                          LARGURA + j * PASSO_MILHO,
+                                          y + i * PASSO_MILHO);
+                }
+            }
+            return lista;
+        }
+    }
+    return lista;       
+}
+
+
+Elemento *criar_grupo_milho(Elemento *lista)
+{
+    switch (GetRandomValue(0, 9)) {
+        case 0: case 1: case 2: case 3:                 
+            return criar_bloco_milho(lista, GetRandomValue(3, 8), 1);
+        case 4: case 5: case 6: {                       
+            int lado = GetRandomValue(2, 4);
+            return criar_bloco_milho(lista, lado, lado);
+        }
+        case 7: case 8:                                 
+            return criar_bloco_milho(lista, 1, GetRandomValue(3, 5));
+        default:                                        
+            return criar_bloco_milho(lista, GetRandomValue(1, 2), 1);
+    }
 }
 
 int main(void)
@@ -208,6 +301,10 @@ int main(void)
     float tempo_jogado = 0;
     float vel_cenario = VEL_X_INICIAL;
     int pontos = 0;
+
+    int milho = 0;                       
+    float timer_milho = 0;               
+    float intervalo_milho = 2.5f;        
 
     int scores[MAX_SCORES];
     int qtd_scores = carregar_scores(scores);
@@ -239,18 +336,35 @@ int main(void)
             }
 
             deslocamento += vel_cenario * dt;
-            pontos = (int)(deslocamento / 100);
+            pontos = (int)(deslocamento / 100) + milho * PONTOS_POR_MILHO;
             timer += dt;
             
             if (timer >= 1.6f) {
-                float alt = (float) GetRandomValue(70, 150);
-                float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
-                lista = inserir(lista, LARGURA, y, 22, alt);
+                for (int tentativa = 0; tentativa < 10; tentativa++) {
+                    float alt = (float) GetRandomValue(70, 150);
+                    float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
+                    if (area_livre(lista, (Rectangle){ LARGURA, y, 22, alt })) {
+                        lista = inserir(lista, LARGURA, y, 22, alt);
+                        break;
+                    }
+                }
                 timer = 0;
+            }
+
+            timer_milho += dt;
+            if (timer_milho >= intervalo_milho) {
+                lista = criar_grupo_milho(lista);
+                timer_milho = 0;
+                intervalo_milho = (float) GetRandomValue(18, 35) / 10.0f;
             }
 
             lista = atualizar(lista, dt, vel_cenario);
             morreu = colidiu(lista, galinha);
+
+            int antes = milho;
+            lista = coletar_milho(lista, galinha, &milho);
+            pontos += (milho - antes) * PONTOS_POR_MILHO;
+
             if (morreu) {
                 registrar_score(scores, &qtd_scores, pontos);
             }
@@ -265,6 +379,9 @@ int main(void)
             tempo_jogado = 0;
             vel_cenario = VEL_X_INICIAL;
             morreu = 0;
+            milho = 0;
+            timer_milho = 0;
+            intervalo_milho = 2.5f;
         }
 
         BeginDrawing();
@@ -280,6 +397,7 @@ int main(void)
         desenhar_lista(lista);
         desenhar_galinha((int) galinha.x, (int) galinha.y);
         DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
+        DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
 
          if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
