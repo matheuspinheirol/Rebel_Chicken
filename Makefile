@@ -7,4 +7,8 @@ run: all
 mac:
 	gcc main.c -o rebel_chicken -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib && ./rebel_chicken
 
-.PHONY: all run mac
+linux:
+	gcc main.c -o rebel_chicken -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 && ./rebel_chicken
+
+.PHONY: all run mac linux
+
