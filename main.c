@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #define LARGURA       800
 #define ALTURA        450
@@ -17,11 +18,13 @@
 #define SPRITE_ALT    12
 #define ESCALA_SPRITE 3  
 
-
 #define MILHO_LARG 16
 #define MILHO_ALT 24
 #define PASSO_MILHO 30
 #define PONTOS_POR_MILHO 10
+
+#define FALCAO_LARG 56
+#define FALCAO_ALT  28
 
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
@@ -41,8 +44,8 @@ int carregar_scores(int scores[])
     return qtd;
 }
 
-void salvar_scores(int scores[], int qtd){
-
+void salvar_scores(int scores[], int qtd)
+{
     FILE *arq = fopen(ARQUIVO_SCORES, "w");  
     if (arq == NULL) return;
 
@@ -53,7 +56,8 @@ void salvar_scores(int scores[], int qtd){
     fclose(arq);
 }
 
-void registrar_score(int scores[], int *qtd, int pontos){
+void registrar_score(int scores[], int *qtd, int pontos)
+{
     int pos = 0;
     while (pos < *qtd && scores[pos] >= pontos) pos++;
 
@@ -69,7 +73,6 @@ void registrar_score(int scores[], int *qtd, int pontos){
 
     salvar_scores(scores, *qtd);
 }
-
 
 int sprite_galinha[SPRITE_ALT][SPRITE_LARG] = {
     {0,0,0,0,0,0,2,2,0,0,0,0},
@@ -130,7 +133,35 @@ void desenhar_milho(Rectangle r)
                        (Vector2){ cx + 1, y + 13 }, GREEN);
 }
 
-typedef enum { OBSTACULO, MILHO } TipoElemento;
+void desenhar_falcao(Rectangle r)
+{
+    int x = (int) r.x, y = (int) r.y, w = (int) r.width;
+    float bater = sinf((float) GetTime() * 16.0f);          // -1 .. 1
+
+    // cauda (atras = lado direito)
+    desenhar_triangulo((Vector2){ x + w - 12, y + 15 },
+                       (Vector2){ x + w + 6,  y + 9 },
+                       (Vector2){ x + w + 6,  y + 23 }, DARKBROWN);
+    // asa batendo (varrida para tras)
+    desenhar_triangulo((Vector2){ x + 22, y + 15 },
+                       (Vector2){ x + 46, y + 15 },
+                       (Vector2){ x + 44, y + 14 - 18 * bater }, BROWN);
+    // corpo e peito claro
+    DrawEllipse(x + 32, y + 17, 24, 9, BROWN);
+    DrawEllipse(x + 30, y + 20, 16, 5, BEIGE);
+    // cabeca
+    DrawCircle(x + 13, y + 13, 9, DARKBROWN);
+    // bico (aponta para a esquerda)
+    desenhar_triangulo((Vector2){ x - 3, y + 14 },
+                       (Vector2){ x + 6, y + 10 },
+                       (Vector2){ x + 6, y + 18 }, GOLD);
+    // olho bravo
+    DrawCircle(x + 11, y + 11, 3, WHITE);
+    DrawCircle(x + 10, y + 11, 1.5f, BLACK);
+    DrawLine(x + 6, y + 5, x + 15, y + 9, BLACK);
+}
+
+typedef enum { OBSTACULO, MILHO, FALCAO } TipoElemento;
 
 typedef struct Elemento {
     TipoElemento tipo;          
@@ -149,13 +180,21 @@ Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
     return novo;                          
 }
 
+Elemento *inserir_falcao(Elemento *inicio, float x, float y)
+{
+    Elemento *novo = inserir(inicio, x, y, FALCAO_LARG, FALCAO_ALT);
+    if (novo != inicio) novo->tipo = FALCAO;
+    return novo;
+}
+
 Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 {
     Elemento *anterior = NULL;
     Elemento *atual = inicio;
 
     while (atual != NULL) {
-        atual->caixa.x -= vel_cenario * dt;
+        float multiplicador = (atual->tipo == FALCAO) ? 1.35f : 1.0f;
+        atual->caixa.x -= vel_cenario * multiplicador * dt;
 
         if (atual->caixa.x + atual->caixa.width < 0) {
             Elemento *remover = atual;
@@ -174,7 +213,9 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 int colidiu(Elemento *inicio, Rectangle galinha)
 {
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
-        if (p->tipo == OBSTACULO && CheckCollisionRecs(galinha, p->caixa)) return 1;
+        if ((p->tipo == OBSTACULO || p->tipo == FALCAO) && CheckCollisionRecs(galinha, p->caixa)) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -184,6 +225,8 @@ void desenhar_lista(Elemento *inicio)
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
         if (p->tipo == MILHO) {
             desenhar_milho(p->caixa);
+        } else if (p->tipo == FALCAO) {
+            desenhar_falcao(p->caixa);
         } else {
             DrawRectangleRec(p->caixa, DARKGRAY);
             DrawRectangleLinesEx(p->caixa, 2, BLACK);
@@ -268,7 +311,6 @@ Elemento *criar_bloco_milho(Elemento *lista, int colunas, int linhas)
     return lista;       
 }
 
-
 Elemento *criar_grupo_milho(Elemento *lista)
 {
     switch (GetRandomValue(0, 9)) {
@@ -305,6 +347,9 @@ int main(void)
     int milho = 0;                       
     float timer_milho = 0;               
     float intervalo_milho = 2.5f;        
+
+    float timer_falcao = 0;
+    float intervalo_falcao = 3.2f;
 
     int scores[MAX_SCORES];
     int qtd_scores = carregar_scores(scores);
@@ -351,6 +396,19 @@ int main(void)
                 timer = 0;
             }
 
+            timer_falcao += dt;
+            if (timer_falcao >= intervalo_falcao) {
+                for (int tentativa = 0; tentativa < 10; tentativa++) {
+                    float y = (float) GetRandomValue(20, CHAO_Y - FALCAO_ALT - 20);
+                    if (area_livre(lista, (Rectangle){ LARGURA, y, FALCAO_LARG, FALCAO_ALT })) {
+                        lista = inserir_falcao(lista, LARGURA, y);
+                        break;
+                    }
+                }
+                timer_falcao = 0;
+                intervalo_falcao = (float) GetRandomValue(22, 42) / 10.0f;
+            }
+
             timer_milho += dt;
             if (timer_milho >= intervalo_milho) {
                 lista = criar_grupo_milho(lista);
@@ -382,6 +440,8 @@ int main(void)
             milho = 0;
             timer_milho = 0;
             intervalo_milho = 2.5f;
+            timer_falcao = 0;
+            intervalo_falcao = 3.2f;
         }
 
         BeginDrawing();
@@ -399,15 +459,15 @@ int main(void)
         DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
         DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
 
-         if (morreu) {
+        if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
             DrawText(TextFormat("Sua pontuacao: %d", pontos), LARGURA / 2 - 110, ALTURA / 2 + 60, 22, BLACK);
             DrawText("Pressione R para reiniciar", LARGURA / 2 - 130, ALTURA / 2 + 30, 20, DARKGRAY);
             DrawText("TOP 5", LARGURA / 2 - 110, ALTURA / 2 + 90, 18, BLACK);
-         for (int i = 0; i < qtd_scores; i++) {
-            DrawText(TextFormat("%d. %d", i + 1, scores[i]),
-                    LARGURA / 2 - 110, ALTURA / 2 + 112 + i * 20, 18, DARKGRAY);
-        }
+            for (int i = 0; i < qtd_scores; i++) {
+                DrawText(TextFormat("%d. %d", i + 1, scores[i]),
+                         LARGURA / 2 - 110, ALTURA / 2 + 112 + i * 20, 18, DARKGRAY);
+            }
         }
         EndDrawing();
     }
