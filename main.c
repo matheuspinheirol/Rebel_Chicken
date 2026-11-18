@@ -37,13 +37,8 @@
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
 
-#define QTD_NUVENS   4
 #define QTD_ARVORES  3
 #define PERIODO      1000
-
-const float nuvem_x[QTD_NUVENS]   = { 50, 300, 550, 800 };
-const float nuvem_y[QTD_NUVENS]   = { 60, 120, 50, 100 };
-const float nuvem_esc[QTD_NUVENS] = { 1.0f, 0.7f, 1.3f, 0.9f };
 
 const float arvore_x[QTD_ARVORES]   = { 100, 450, 780 };
 const float arvore_esc[QTD_ARVORES] = { 1.0f, 0.8f, 1.2f };
@@ -208,22 +203,6 @@ float posicao_loop(float x0, float deslocamento, float fator, float folga)
     return x - folga;
 }
 
-void desenhar_sol(float cx, float cy)
-{
-    DrawCircle((int) cx, (int) cy, 50, Fade(YELLOW, 0.25f));
-    DrawCircle((int) cx, (int) cy, 35, GOLD);
-    DrawCircle((int) cx, (int) cy, 30, YELLOW);
-}
-
-void desenhar_nuvem(float x, float y, float e)
-{
-    Color branco = Fade(WHITE, 0.95f);
-    DrawEllipse((int) x, (int)(y + 10 * e), 48 * e, 14 * e, branco);
-    DrawCircle((int)(x - 22 * e), (int)(y + 2 * e),  18 * e, branco);
-    DrawCircle((int)(x),          (int)(y - 10 * e), 24 * e, branco);
-    DrawCircle((int)(x + 24 * e), (int)(y + 2 * e),  18 * e, branco);
-}
-
 void desenhar_colinas(float deslocamento, float fator, int passo,
                       float rx, float ry, Color cor)
 {
@@ -244,14 +223,7 @@ void desenhar_arvore(float x, float base, float e)
 
 void desenhar_cenario(float deslocamento)
 {
-    DrawRectangleGradientV(0, 0, LARGURA, CHAO_Y,
-                           (Color){ 90, 170, 255, 255 }, (Color){ 205, 238, 255, 255 });
-    desenhar_sol(690, 75);
-
-    for (int i = 0; i < QTD_NUVENS; i++) {
-        float x = posicao_loop(nuvem_x[i], deslocamento, 0.10f, 150);
-        desenhar_nuvem(x, nuvem_y[i], nuvem_esc[i]);
-    }
+    ClearBackground(SKYBLUE);
 
     desenhar_colinas(deslocamento, 0.10f, 420, 270, 85, (Color){ 150, 210, 150, 255 });
     desenhar_colinas(deslocamento, 0.25f, 300, 200, 55, (Color){ 100, 180, 100, 255 });
@@ -823,7 +795,7 @@ int main(void)
             DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, YELLOW);
         }
 
-         if (morreu) {
+        if (morreu) {
             DrawRectangle(0, 0, LARGURA, ALTURA, Fade(BLACK, 0.7f));
             DrawText("GAME OVER", LARGURA / 2 - 105, ALTURA / 2 - 100, 40, RED);
             DrawText("Pressione R para reiniciar", LARGURA / 2 - 128, ALTURA / 2 - 50, 20, WHITE);
