@@ -5,18 +5,18 @@
 
 #define LARGURA       800
 #define ALTURA        450
-#define CHAO_Y        420     
+#define CHAO_Y        420
 
 #define VEL_X_INICIAL 250.0f
 #define VEL_X_MAXIMA  750.0f
 
-#define SOBE         -1300.0f  
-#define DESCE         900.0f   
-#define VEL_MAXIMA    550.0f   
+#define SOBE         -1300.0f
+#define DESCE         900.0f
+#define VEL_MAXIMA    550.0f
 
 #define SPRITE_LARG   12
 #define SPRITE_ALT    12
-#define ESCALA_SPRITE 3  
+#define ESCALA_SPRITE 3
 
 #define MILHO_LARG 16
 #define MILHO_ALT 24
@@ -30,6 +30,7 @@
 #define GAP_FALCAO         8
 #define MAX_FALCOES        6
 #define SEGUNDOS_POR_NIVEL 20.0f
+#define TEMPO_INICIO_FALCAO 10.0f
 
 #define VEL_GIRO          180.0f
 
@@ -41,7 +42,7 @@ int carregar_scores(int scores[])
     FILE *arq = fopen(ARQUIVO_SCORES, "r");
     int qtd = 0;
 
-    if (arq == NULL) return 0;  
+    if (arq == NULL) return 0;
 
     while (qtd < MAX_SCORES && fscanf(arq, "%d", &scores[qtd]) == 1) {
         qtd++;
@@ -53,7 +54,7 @@ int carregar_scores(int scores[])
 
 void salvar_scores(int scores[], int qtd)
 {
-    FILE *arq = fopen(ARQUIVO_SCORES, "w");  
+    FILE *arq = fopen(ARQUIVO_SCORES, "w");
     if (arq == NULL) return;
 
     for (int i = 0; i < qtd; i++) {
@@ -68,7 +69,7 @@ void registrar_score(int scores[], int *qtd, int pontos)
     int pos = 0;
     while (pos < *qtd && scores[pos] >= pontos) pos++;
 
-    if (pos >= MAX_SCORES) return;   
+    if (pos >= MAX_SCORES) return;
 
     int fim = (*qtd < MAX_SCORES) ? *qtd : MAX_SCORES - 1;
     for (int i = fim; i > pos; i--) {
@@ -124,10 +125,10 @@ void desenhar_milho(Rectangle r)
 {
     int x = (int) r.x, y = (int) r.y;
     int cx = x + MILHO_LARG / 2;
-    Color grao = (Color){ 205, 133, 0, 255 };               
+    Color grao = (Color){ 205, 133, 0, 255 };
 
-    DrawEllipse(cx, y + 10, 6, 10, GOLD);                   
-    for (int i = 0; i < 3; i++) {                           
+    DrawEllipse(cx, y + 10, 6, 10, GOLD);
+    for (int i = 0; i < 3; i++) {
         DrawLine(cx - 5, y + 5 + i * 5, cx + 5, y + 5 + i * 5, grao);
     }
     DrawLine(cx, y + 1, cx, y + 19, grao);
@@ -170,24 +171,21 @@ void desenhar_alerta(float faixa_y, float faixa_alt, int qtd, float tempo)
     DrawRectangle(0, (int) faixa_y - 4, LARGURA, (int) faixa_alt + 8,
                   Fade(RED, 0.15f + 0.25f * brilho));
 
-    float s = 30 + 4 * pulso;
-    float cx = LARGURA - 55;
+    int tam = (int)(44 + 6 * pulso);
+    int larg_ex = MeasureText("!", tam);
+    float cx = LARGURA - 40;
     float cy = faixa_y + faixa_alt / 2;
-    if (cy < s + 16) cy = s + 16;
-    if (cy > CHAO_Y - s - 16) cy = CHAO_Y - s - 16;
+    if (cy < tam / 2 + 10) cy = tam / 2 + 10;
+    if (cy > CHAO_Y - tam / 2 - 10) cy = CHAO_Y - tam / 2 - 10;
 
-    float tam[3]  = { s + 12, s + 8, s };
-    Color cor[3]  = { BLACK, RED, YELLOW };
-    for (int i = 0; i < 3; i++) {
-        desenhar_triangulo((Vector2){ cx, cy - tam[i] },
-                           (Vector2){ cx - tam[i], cy + tam[i] * 0.85f },
-                           (Vector2){ cx + tam[i], cy + tam[i] * 0.85f }, cor[i]);
-    }
-    DrawText("!", (int)(cx - MeasureText("!", 30) / 2), (int)(cy - s * 0.35f), 30, BLACK);
+    int ex = (int)(cx - larg_ex / 2);
+    int ey = (int)(cy - tam / 2);
+    DrawText("!", ex + 2, ey + 2, tam, BLACK);
+    DrawText("!", ex,     ey,     tam, RED);
 
     const char *texto = (qtd > 1) ? "FALCOES!" : "FALCAO!";
     int larg_txt = MeasureText(texto, 26);
-    int tx = (int)(cx - s - 24 - larg_txt);
+    int tx = (int)(cx - larg_ex / 2 - 16 - larg_txt);
     DrawText(texto, tx + 2, (int) cy - 11, 26, BLACK);
     DrawText(texto, tx,     (int) cy - 13, 26, RED);
 }
@@ -196,8 +194,8 @@ typedef enum { OBSTACULO, OBS_HORIZONTAL, OBS_INCLINADO, OBS_GIRATORIO,
                MILHO, FALCAO } TipoElemento;
 
 typedef struct Elemento {
-    TipoElemento tipo;          
-    Rectangle caixa;            
+    TipoElemento tipo;
+    Rectangle caixa;
     float angulo;
     struct Elemento *prox;
 } Elemento;
@@ -205,13 +203,13 @@ typedef struct Elemento {
 Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
 {
     Elemento *novo = (Elemento *) malloc(sizeof(Elemento));
-    if (novo == NULL) return inicio;      
+    if (novo == NULL) return inicio;
 
     novo->caixa = (Rectangle){ x, y, larg, alt };
-    novo->tipo = OBSTACULO;               
+    novo->tipo = OBSTACULO;
     novo->angulo = 0;
-    novo->prox = inicio;                  
-    return novo;                          
+    novo->prox = inicio;
+    return novo;
 }
 
 Elemento *inserir_falcao(Elemento *inicio, float x, float y)
@@ -220,6 +218,7 @@ Elemento *inserir_falcao(Elemento *inicio, float x, float y)
     if (novo != inicio) novo->tipo = FALCAO;
     return novo;
 }
+
 Elemento *criar_onda_falcoes(Elemento *lista, float faixa_y, int qtd)
 {
     for (int i = 0; i < qtd; i++) {
@@ -247,8 +246,8 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
 
         if (atual->caixa.x + atual->caixa.width < 0) {
             Elemento *remover = atual;
-            if (anterior == NULL) inicio = atual->prox;   
-            else anterior->prox = atual->prox;            
+            if (anterior == NULL) inicio = atual->prox;
+            else anterior->prox = atual->prox;
             atual = atual->prox;
             free(remover);
         } else {
@@ -411,8 +410,8 @@ Elemento *coletar_milho(Elemento *inicio, Rectangle galinha, int *milho)
         if (atual->tipo == MILHO && CheckCollisionRecs(galinha, atual->caixa)) {
             (*milho)++;
             Elemento *remover = atual;
-            if (anterior == NULL) inicio = atual->prox;   
-            else anterior->prox = atual->prox;            
+            if (anterior == NULL) inicio = atual->prox;
+            else anterior->prox = atual->prox;
             atual = atual->prox;
             free(remover);
         } else {
@@ -433,8 +432,8 @@ Elemento *criar_bloco_milho(Elemento *lista, int colunas, int linhas)
         Rectangle area = { LARGURA, y, larg_bloco, alt_bloco };
 
         if (area_livre(lista, area)) {
-            for (int i = 0; i < linhas; i++) {          
-                for (int j = 0; j < colunas; j++) {     
+            for (int i = 0; i < linhas; i++) {
+                for (int j = 0; j < colunas; j++) {
                     lista = inserir_milho(lista,
                                           LARGURA + j * PASSO_MILHO,
                                           y + i * PASSO_MILHO);
@@ -443,21 +442,21 @@ Elemento *criar_bloco_milho(Elemento *lista, int colunas, int linhas)
             return lista;
         }
     }
-    return lista;       
+    return lista;
 }
 
 Elemento *criar_grupo_milho(Elemento *lista)
 {
     switch (GetRandomValue(0, 9)) {
-        case 0: case 1: case 2: case 3:                 
+        case 0: case 1: case 2: case 3:
             return criar_bloco_milho(lista, GetRandomValue(3, 8), 1);
-        case 4: case 5: case 6: {                       
+        case 4: case 5: case 6: {
             int lado = GetRandomValue(2, 4);
             return criar_bloco_milho(lista, lado, lado);
         }
-        case 7: case 8:                                 
+        case 7: case 8:
             return criar_bloco_milho(lista, 1, GetRandomValue(3, 5));
-        default:                                        
+        default:
             return criar_bloco_milho(lista, GetRandomValue(1, 2), 1);
     }
 }
@@ -530,21 +529,21 @@ int main(void)
     InitWindow(LARGURA, ALTURA, "Rebel Chicken");
     SetTargetFPS(60);
 
-    Elemento *lista = NULL;                
-    Rectangle galinha = { 100, 200, 36, 36 };  
-    
+    Elemento *lista = NULL;
+    Rectangle galinha = { 100, 200, 36, 36 };
+
     float vel_y = 0;
-    float deslocamento = 0;        
-    float timer = 0;                    
+    float deslocamento = 0;
+    float timer = 0;
     int morreu = 0;
-    
+
     float tempo_jogado = 0;
     float vel_cenario = VEL_X_INICIAL;
     int pontos = 0;
 
-    int milho = 0;                       
-    float timer_milho = 0;               
-    float intervalo_milho = 2.5f;        
+    int milho = 0;
+    float timer_milho = 0;
+    float intervalo_milho = 2.5f;
 
     float timer_falcao = 0;
     float intervalo_falcao = 3.2f;
@@ -558,10 +557,10 @@ int main(void)
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
-        
+
         if (!morreu) {
             tempo_jogado += dt;
-            
+
             if (tempo_jogado <= 45.0f) {
                 vel_cenario = VEL_X_INICIAL + ((VEL_X_MAXIMA - VEL_X_INICIAL) * (tempo_jogado / 45.0f));
             } else {
@@ -570,10 +569,10 @@ int main(void)
 
             if (IsKeyDown(KEY_SPACE)) vel_y += SOBE * dt;
             else vel_y += DESCE * dt;
-            
+
             if (vel_y >  VEL_MAXIMA) vel_y =  VEL_MAXIMA;
             if (vel_y < -VEL_MAXIMA) vel_y = -VEL_MAXIMA;
-            
+
             galinha.y += vel_y * dt;
 
             if (galinha.y < 0) { galinha.y = 0; vel_y = 0; }
@@ -585,14 +584,14 @@ int main(void)
             deslocamento += vel_cenario * dt;
             pontos = (int)(deslocamento / 100) + milho * PONTOS_POR_MILHO;
             timer += dt;
-            
+
             if (timer >= 1.6f) {
                 lista = criar_obstaculo(lista);
                 timer = 0;
             }
 
             timer_falcao += dt;
-            if (!aviso_ativo && timer_falcao >= intervalo_falcao) {
+            if (!aviso_ativo && tempo_jogado >= TEMPO_INICIO_FALCAO && timer_falcao >= intervalo_falcao) {
                 aviso_ativo = 1;
                 aviso_timer = 0;
 
@@ -654,10 +653,10 @@ int main(void)
         }
 
         BeginDrawing();
-        
+
         ClearBackground(SKYBLUE);
         DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
-        
+
         int desloc_cerca = (int) deslocamento % 100;
         for (int i = -1; i <= LARGURA / 100 + 1; i++) {
             DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, BROWN);
@@ -681,8 +680,8 @@ int main(void)
         }
         EndDrawing();
     }
-    
-    lista = liberar_lista(lista); 
+
+    lista = liberar_lista(lista);
     CloseWindow();
     return 0;
 }
