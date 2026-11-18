@@ -37,6 +37,17 @@
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
 
+#define QTD_NUVENS   4
+#define QTD_ARVORES  3
+#define PERIODO      1000
+
+const float nuvem_x[QTD_NUVENS]   = { 50, 300, 550, 800 };
+const float nuvem_y[QTD_NUVENS]   = { 60, 120, 50, 100 };
+const float nuvem_esc[QTD_NUVENS] = { 1.0f, 0.7f, 1.3f, 0.9f };
+
+const float arvore_x[QTD_ARVORES]   = { 100, 450, 780 };
+const float arvore_esc[QTD_ARVORES] = { 1.0f, 0.8f, 1.2f };
+
 int carregar_scores(int scores[])
 {
     FILE *arq = fopen(ARQUIVO_SCORES, "r");
@@ -188,6 +199,77 @@ void desenhar_alerta(float faixa_y, float faixa_alt, int qtd, float tempo)
     int tx = (int)(cx - larg_ex / 2 - 16 - larg_txt);
     DrawText(texto, tx + 2, (int) cy - 11, 26, BLACK);
     DrawText(texto, tx,     (int) cy - 13, 26, RED);
+}
+
+float posicao_loop(float x0, float deslocamento, float fator, float folga)
+{
+    float x = fmodf(x0 - deslocamento * fator, PERIODO);
+    if (x < 0) x += PERIODO;
+    return x - folga;
+}
+
+void desenhar_sol(float cx, float cy)
+{
+    DrawCircle((int) cx, (int) cy, 50, Fade(YELLOW, 0.25f));
+    DrawCircle((int) cx, (int) cy, 35, GOLD);
+    DrawCircle((int) cx, (int) cy, 30, YELLOW);
+}
+
+void desenhar_nuvem(float x, float y, float e)
+{
+    Color branco = Fade(WHITE, 0.95f);
+    DrawEllipse((int) x, (int)(y + 10 * e), 48 * e, 14 * e, branco);
+    DrawCircle((int)(x - 22 * e), (int)(y + 2 * e),  18 * e, branco);
+    DrawCircle((int)(x),          (int)(y - 10 * e), 24 * e, branco);
+    DrawCircle((int)(x + 24 * e), (int)(y + 2 * e),  18 * e, branco);
+}
+
+void desenhar_colinas(float deslocamento, float fator, int passo,
+                      float rx, float ry, Color cor)
+{
+    float d = fmodf(deslocamento * fator, (float) passo);
+    for (int i = -1; i <= LARGURA / passo + 1; i++) {
+        float cx = i * passo - d + passo / 2.0f;
+        DrawEllipse((int) cx, CHAO_Y, rx, ry, cor);
+    }
+}
+
+void desenhar_arvore(float x, float base, float e)
+{
+    DrawRectangle((int)(x - 6 * e), (int)(base - 48 * e), (int)(12 * e), (int)(48 * e), BROWN);
+    DrawCircle((int)(x - 20 * e), (int)(base - 52 * e), 20 * e, DARKGREEN);
+    DrawCircle((int)(x + 20 * e), (int)(base - 52 * e), 20 * e, DARKGREEN);
+    DrawCircle((int) x,           (int)(base - 64 * e), 28 * e, GREEN);
+}
+
+void desenhar_cenario(float deslocamento)
+{
+    DrawRectangleGradientV(0, 0, LARGURA, CHAO_Y,
+                           (Color){ 90, 170, 255, 255 }, (Color){ 205, 238, 255, 255 });
+    desenhar_sol(690, 75);
+
+    for (int i = 0; i < QTD_NUVENS; i++) {
+        float x = posicao_loop(nuvem_x[i], deslocamento, 0.10f, 150);
+        desenhar_nuvem(x, nuvem_y[i], nuvem_esc[i]);
+    }
+
+    desenhar_colinas(deslocamento, 0.10f, 420, 270, 85, (Color){ 150, 210, 150, 255 });
+    desenhar_colinas(deslocamento, 0.25f, 300, 200, 55, (Color){ 100, 180, 100, 255 });
+
+    DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
+    DrawRectangle(0, CHAO_Y, LARGURA, 6, (Color){ 80, 180, 70, 255 });
+
+    for (int i = 0; i < QTD_ARVORES; i++) {
+        float x = posicao_loop(arvore_x[i], deslocamento, 0.5f, 100);
+        desenhar_arvore(x, CHAO_Y + 4, arvore_esc[i]);
+    }
+
+    DrawRectangle(0, CHAO_Y - 18, LARGURA, 4, BROWN);
+    DrawRectangle(0, CHAO_Y - 8,  LARGURA, 4, BROWN);
+    int desloc_cerca = (int) deslocamento % 100;
+    for (int i = -1; i <= LARGURA / 100 + 1; i++) {
+        DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, DARKBROWN);
+    }
 }
 
 typedef enum { OBSTACULO, OBS_HORIZONTAL, OBS_INCLINADO, OBS_GIRATORIO,
@@ -728,13 +810,7 @@ int main(void)
 
         BeginDrawing();
 
-        ClearBackground(SKYBLUE);
-        DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
-
-        int desloc_cerca = (int) deslocamento % 100;
-        for (int i = -1; i <= LARGURA / 100 + 1; i++) {
-            DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, BROWN);
-        }
+        desenhar_cenario(deslocamento);
 
         desenhar_lista(lista);
         if (!morreu && aviso_ativo) desenhar_alerta(faixa_y, faixa_alt, qtd_falcoes, aviso_timer);
