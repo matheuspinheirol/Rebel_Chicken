@@ -37,6 +37,12 @@
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
 
+#define QTD_ARVORES  3
+#define PERIODO      1000
+
+const float arvore_x[QTD_ARVORES]   = { 100, 450, 780 };
+const float arvore_esc[QTD_ARVORES] = { 1.0f, 0.8f, 1.2f };
+
 int carregar_scores(int scores[])
 {
     FILE *arq = fopen(ARQUIVO_SCORES, "r");
@@ -188,6 +194,54 @@ void desenhar_alerta(float faixa_y, float faixa_alt, int qtd, float tempo)
     int tx = (int)(cx - larg_ex / 2 - 16 - larg_txt);
     DrawText(texto, tx + 2, (int) cy - 11, 26, BLACK);
     DrawText(texto, tx,     (int) cy - 13, 26, RED);
+}
+
+float posicao_loop(float x0, float deslocamento, float fator, float folga)
+{
+    float x = fmodf(x0 - deslocamento * fator, PERIODO);
+    if (x < 0) x += PERIODO;
+    return x - folga;
+}
+
+void desenhar_colinas(float deslocamento, float fator, int passo,
+                      float rx, float ry, Color cor)
+{
+    float d = fmodf(deslocamento * fator, (float) passo);
+    for (int i = -1; i <= LARGURA / passo + 1; i++) {
+        float cx = i * passo - d + passo / 2.0f;
+        DrawEllipse((int) cx, CHAO_Y, rx, ry, cor);
+    }
+}
+
+void desenhar_arvore(float x, float base, float e)
+{
+    DrawRectangle((int)(x - 6 * e), (int)(base - 48 * e), (int)(12 * e), (int)(48 * e), BROWN);
+    DrawCircle((int)(x - 20 * e), (int)(base - 52 * e), 20 * e, DARKGREEN);
+    DrawCircle((int)(x + 20 * e), (int)(base - 52 * e), 20 * e, DARKGREEN);
+    DrawCircle((int) x,           (int)(base - 64 * e), 28 * e, GREEN);
+}
+
+void desenhar_cenario(float deslocamento)
+{
+    ClearBackground(SKYBLUE);
+
+    desenhar_colinas(deslocamento, 0.10f, 420, 270, 85, (Color){ 150, 210, 150, 255 });
+    desenhar_colinas(deslocamento, 0.25f, 300, 200, 55, (Color){ 100, 180, 100, 255 });
+
+    DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
+    DrawRectangle(0, CHAO_Y, LARGURA, 6, (Color){ 80, 180, 70, 255 });
+
+    for (int i = 0; i < QTD_ARVORES; i++) {
+        float x = posicao_loop(arvore_x[i], deslocamento, 0.5f, 100);
+        desenhar_arvore(x, CHAO_Y + 4, arvore_esc[i]);
+    }
+
+    DrawRectangle(0, CHAO_Y - 18, LARGURA, 4, BROWN);
+    DrawRectangle(0, CHAO_Y - 8,  LARGURA, 4, BROWN);
+    int desloc_cerca = (int) deslocamento % 100;
+    for (int i = -1; i <= LARGURA / 100 + 1; i++) {
+        DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, DARKBROWN);
+    }
 }
 
 typedef enum { OBSTACULO, OBS_HORIZONTAL, OBS_INCLINADO, OBS_GIRATORIO,
@@ -728,13 +782,7 @@ int main(void)
 
         BeginDrawing();
 
-        ClearBackground(SKYBLUE);
-        DrawRectangle(0, CHAO_Y, LARGURA, ALTURA - CHAO_Y, DARKGREEN);
-
-        int desloc_cerca = (int) deslocamento % 100;
-        for (int i = -1; i <= LARGURA / 100 + 1; i++) {
-            DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, BROWN);
-        }
+        desenhar_cenario(deslocamento);
 
         desenhar_lista(lista);
         if (!morreu && aviso_ativo) desenhar_alerta(faixa_y, faixa_alt, qtd_falcoes, aviso_timer);
@@ -747,7 +795,7 @@ int main(void)
             DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
         }
 
-         if (morreu) {
+        if (morreu) {
             DrawRectangle(0, 0, LARGURA, ALTURA, Fade(BLACK, 0.7f));
             DrawText("GAME OVER", LARGURA / 2 - 105, ALTURA / 2 - 100, 40, RED);
             DrawText("Pressione R para reiniciar", LARGURA / 2 - 128, ALTURA / 2 - 50, 20, WHITE);
