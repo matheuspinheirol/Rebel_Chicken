@@ -2,6 +2,7 @@
 *.exe
 *.o
 rebel_chicken
+top_scores.txt
 
 # VS Code
 .vscode/
