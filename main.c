@@ -744,7 +744,7 @@ int main(void)
             desenhar_tela_inicial(scores, qtd_scores);
         } else {
             DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
-            DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
+            DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, YELLOW);
         }
 
         if (morreu) {
