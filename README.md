@@ -58,6 +58,6 @@ No Windows, também é possível compilar com⁠ _make_ e depois abrir o ⁠�
 
 ### Objetivo
 
--⁠ ⁠Colete o milho para ganhar pontos.
--⁠ ⁠Desvie do arame farpado e dos falcões.
-- ⁠Sobreviva o máximo que conseguir: a dificuldade aumenta com o tempo.
+* ⁠ Colete o milho para ganhar pontos.
+*⁠ ⁠ Desvie do arame farpado e dos falcões.
+*  ⁠Sobreviva o máximo que conseguir: a dificuldade aumenta com o tempo.
