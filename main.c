@@ -31,6 +31,8 @@
 #define MAX_FALCOES        6
 #define SEGUNDOS_POR_NIVEL 20.0f
 
+#define VEL_GIRO          180.0f
+
 #define MAX_SCORES     5
 #define ARQUIVO_SCORES "top_scores.txt"
 
@@ -190,11 +192,13 @@ void desenhar_alerta(float faixa_y, float faixa_alt, int qtd, float tempo)
     DrawText(texto, tx,     (int) cy - 13, 26, RED);
 }
 
-typedef enum { OBSTACULO, MILHO, FALCAO } TipoElemento;
+typedef enum { OBSTACULO, OBS_HORIZONTAL, OBS_INCLINADO, OBS_GIRATORIO,
+               MILHO, FALCAO } TipoElemento;
 
 typedef struct Elemento {
     TipoElemento tipo;          
     Rectangle caixa;            
+    float angulo;
     struct Elemento *prox;
 } Elemento;
 
@@ -205,6 +209,7 @@ Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
 
     novo->caixa = (Rectangle){ x, y, larg, alt };
     novo->tipo = OBSTACULO;               
+    novo->angulo = 0;
     novo->prox = inicio;                  
     return novo;                          
 }
@@ -218,7 +223,7 @@ Elemento *inserir_falcao(Elemento *inicio, float x, float y)
 Elemento *criar_onda_falcoes(Elemento *lista, float faixa_y, int qtd)
 {
     for (int i = 0; i < qtd; i++) {
-        float x = LARGURA + 20 + (i % 2) * 40;      // zigue-zague para não ficar uma parede reta
+        float x = LARGURA + 20 + (i % 2) * 40;
         float y = faixa_y + i * (FALCAO_ALT + GAP_FALCAO);
         lista = inserir_falcao(lista, x, y);
     }
@@ -235,6 +240,11 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
         if (atual->tipo == FALCAO) vel += FALCAO_VEL_EXTRA;
         atual->caixa.x -= vel * dt;
 
+        if (atual->tipo == OBS_GIRATORIO) {
+            atual->angulo += VEL_GIRO * dt;
+            if (atual->angulo >= 360.0f) atual->angulo -= 360.0f;
+        }
+
         if (atual->caixa.x + atual->caixa.width < 0) {
             Elemento *remover = atual;
             if (anterior == NULL) inicio = atual->prox;   
@@ -249,6 +259,56 @@ Elemento *atualizar(Elemento *inicio, float dt, float vel_cenario)
     return inicio;
 }
 
+void calcular_cantos(Vector2 c, float w, float h, float ang, Vector2 out[4])
+{
+    float a = ang * DEG2RAD;
+    float cs = cosf(a), sn = sinf(a);
+    float hx = w / 2, hy = h / 2;
+    Vector2 loc[4] = { {-hx, -hy}, {hx, -hy}, {hx, hy}, {-hx, hy} };
+
+    for (int i = 0; i < 4; i++) {
+        out[i].x = c.x + loc[i].x * cs - loc[i].y * sn;
+        out[i].y = c.y + loc[i].x * sn + loc[i].y * cs;
+    }
+}
+
+void projetar(Vector2 p[4], Vector2 eixo, float *min, float *max)
+{
+    *min = *max = p[0].x * eixo.x + p[0].y * eixo.y;
+    for (int i = 1; i < 4; i++) {
+        float v = p[i].x * eixo.x + p[i].y * eixo.y;
+        if (v < *min) *min = v;
+        if (v > *max) *max = v;
+    }
+}
+
+int colisao_sat(Vector2 a[4], Vector2 b[4])
+{
+    Vector2 *poly[2] = { a, b };
+    for (int k = 0; k < 2; k++) {
+        for (int i = 0; i < 4; i++) {
+            Vector2 p1 = poly[k][i];
+            Vector2 p2 = poly[k][(i + 1) % 4];
+            Vector2 eixo = { -(p2.y - p1.y), p2.x - p1.x };
+            float minA, maxA, minB, maxB;
+            projetar(a, eixo, &minA, &maxA);
+            projetar(b, eixo, &minB, &maxB);
+            if (maxA < minB || maxB < minA) return 0;
+        }
+    }
+    return 1;
+}
+
+int colisao_rotacionada(Rectangle galinha, Elemento *e)
+{
+    Vector2 cg = { galinha.x + galinha.width / 2, galinha.y + galinha.height / 2 };
+    Vector2 ce = { e->caixa.x + e->caixa.width / 2, e->caixa.y + e->caixa.height / 2 };
+    Vector2 pg[4], pe[4];
+    calcular_cantos(cg, galinha.width, galinha.height, 0, pg);
+    calcular_cantos(ce, e->caixa.width, e->caixa.height, e->angulo, pe);
+    return colisao_sat(pg, pe);
+}
+
 int colidiu(Elemento *inicio, Rectangle galinha)
 {
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
@@ -259,9 +319,25 @@ int colidiu(Elemento *inicio, Rectangle galinha)
             caixa.y += 4;
             caixa.height -= 8;
         }
-        if (CheckCollisionRecs(galinha, caixa)) return 1;
+
+        if (p->tipo == OBS_INCLINADO || p->tipo == OBS_GIRATORIO) {
+            if (colisao_rotacionada(galinha, p)) return 1;
+        } else if (CheckCollisionRecs(galinha, caixa)) {
+            return 1;
+        }
     }
     return 0;
+}
+
+void desenhar_bloco_girado(Elemento *p)
+{
+    Rectangle c = p->caixa;
+    Vector2 centro = { c.x + c.width / 2, c.y + c.height / 2 };
+    Rectangle externo = { centro.x, centro.y, c.width, c.height };
+    Rectangle interno = { centro.x, centro.y, c.width - 4, c.height - 4 };
+
+    DrawRectanglePro(externo, (Vector2){ c.width / 2, c.height / 2 }, p->angulo, BLACK);
+    DrawRectanglePro(interno, (Vector2){ (c.width - 4) / 2, (c.height - 4) / 2 }, p->angulo, DARKGRAY);
 }
 
 void desenhar_lista(Elemento *inicio)
@@ -269,7 +345,9 @@ void desenhar_lista(Elemento *inicio)
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
         if (p->tipo == MILHO) {
             desenhar_milho(p->caixa);
-        } else if (p->tipo == OBSTACULO) {
+        } else if (p->tipo == OBS_INCLINADO || p->tipo == OBS_GIRATORIO) {
+            desenhar_bloco_girado(p);
+        } else if (p->tipo != FALCAO) {
             DrawRectangleRec(p->caixa, DARKGRAY);
             DrawRectangleLinesEx(p->caixa, 2, BLACK);
         }
@@ -296,11 +374,23 @@ Rectangle com_folga(Rectangle r)
                         r.width + 2 * folga, r.height + 2 * folga };
 }
 
+Rectangle caixa_envolvente(Elemento *e)
+{
+    Rectangle c = e->caixa;
+
+    if (e->tipo == OBS_INCLINADO || e->tipo == OBS_GIRATORIO) {
+        float cx = c.x + c.width / 2, cy = c.y + c.height / 2;
+        float raio = sqrtf(c.width * c.width + c.height * c.height) / 2;
+        return (Rectangle){ cx - raio, cy - raio, 2 * raio, 2 * raio };
+    }
+    return c;
+}
+
 int area_livre(Elemento *lista, Rectangle area)
 {
     Rectangle a = com_folga(area);
     for (Elemento *p = lista; p != NULL; p = p->prox) {
-        if (CheckCollisionRecs(a, com_folga(p->caixa))) return 0;
+        if (CheckCollisionRecs(a, com_folga(caixa_envolvente(p)))) return 0;
     }
     return 1;
 }
@@ -372,6 +462,69 @@ Elemento *criar_grupo_milho(Elemento *lista)
     }
 }
 
+Elemento *inserir_obstaculo(Elemento *inicio, TipoElemento tipo,
+                            float x, float y, float larg, float alt, float angulo)
+{
+    Elemento *novo = inserir(inicio, x, y, larg, alt);
+    if (novo != inicio) {
+        novo->tipo = tipo;
+        novo->angulo = angulo;
+    }
+    return novo;
+}
+
+Elemento *inserir_se_livre(Elemento *lista, TipoElemento tipo,
+                           float x, float y, float larg, float alt, float ang)
+{
+    Elemento tmp = { tipo, { x, y, larg, alt }, ang, NULL };
+    if (!area_livre(lista, caixa_envolvente(&tmp))) return lista;
+    return inserir_obstaculo(lista, tipo, x, y, larg, alt, ang);
+}
+
+Elemento *criar_obstaculo_vertical(Elemento *lista)
+{
+    float alt = (float) GetRandomValue(70, 150);
+    float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
+    return inserir_se_livre(lista, OBSTACULO, LARGURA, y, 22, alt, 0);
+}
+
+Elemento *criar_obstaculo_horizontal(Elemento *lista)
+{
+    float alt = 22;
+    float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
+    return inserir_se_livre(lista, OBS_HORIZONTAL, LARGURA, y, 130, alt, 0);
+}
+
+Elemento *criar_obstaculo_inclinado(Elemento *lista)
+{
+    float larg = 150, alt = 22, margem = 80;
+    float cy = (float) GetRandomValue((int) margem, (int)(CHAO_Y - margem));
+    float ang = (float) GetRandomValue(30, 45);
+    return inserir_se_livre(lista, OBS_INCLINADO, LARGURA, cy - alt / 2, larg, alt, ang);
+}
+
+Elemento *criar_obstaculo_giratorio(Elemento *lista)
+{
+    float larg = 110, alt = 20, margem = 60;
+    float cy = (float) GetRandomValue((int) margem, (int)(CHAO_Y - margem));
+    return inserir_se_livre(lista, OBS_GIRATORIO, LARGURA, cy - alt / 2, larg, alt, 0);
+}
+
+Elemento *criar_obstaculo(Elemento *lista)
+{
+    for (int tentativa = 0; tentativa < 10; tentativa++) {
+        Elemento *nova;
+        switch (GetRandomValue(0, 3)) {
+            case 0:  nova = criar_obstaculo_vertical(lista);   break;
+            case 1:  nova = criar_obstaculo_horizontal(lista); break;
+            case 2:  nova = criar_obstaculo_inclinado(lista);  break;
+            default: nova = criar_obstaculo_giratorio(lista);  break;
+        }
+        if (nova != lista) return nova;
+    }
+    return lista;
+}
+
 int main(void)
 {
     InitWindow(LARGURA, ALTURA, "Rebel Chicken");
@@ -434,14 +587,7 @@ int main(void)
             timer += dt;
             
             if (timer >= 1.6f) {
-                for (int tentativa = 0; tentativa < 10; tentativa++) {
-                    float alt = (float) GetRandomValue(70, 150);
-                    float y = (float) GetRandomValue(0, (int)(CHAO_Y - alt));
-                    if (area_livre(lista, (Rectangle){ LARGURA, y, 22, alt })) {
-                        lista = inserir(lista, LARGURA, y, 22, alt);
-                        break;
-                    }
-                }
+                lista = criar_obstaculo(lista);
                 timer = 0;
             }
 
