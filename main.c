@@ -823,14 +823,15 @@ int main(void)
             DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, YELLOW);
         }
 
-        if (morreu) {
-            DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
-            DrawText(TextFormat("Sua pontuacao: %d", pontos), LARGURA / 2 - 110, ALTURA / 2 + 60, 22, BLACK);
-            DrawText("Pressione R para reiniciar", LARGURA / 2 - 130, ALTURA / 2 + 30, 20, DARKGRAY);
-            DrawText("TOP 5", LARGURA / 2 - 110, ALTURA / 2 + 90, 18, BLACK);
+         if (morreu) {
+            DrawRectangle(0, 0, LARGURA, ALTURA, Fade(BLACK, 0.7f));
+            DrawText("GAME OVER", LARGURA / 2 - 105, ALTURA / 2 - 100, 40, RED);
+            DrawText("Pressione R para reiniciar", LARGURA / 2 - 128, ALTURA / 2 - 50, 20, WHITE);
+            DrawText(TextFormat("Sua pontuacao: %d", pontos), LARGURA / 2 - 95, ALTURA / 2 - 20, 22, WHITE);
+            DrawText("TOP 5", LARGURA / 2 - 25, ALTURA / 2 + 20, 18, WHITE);
             for (int i = 0; i < qtd_scores; i++) {
                 DrawText(TextFormat("%d. %d", i + 1, scores[i]),
-                         LARGURA / 2 - 110, ALTURA / 2 + 112 + i * 20, 18, DARKGRAY);
+                         LARGURA / 2 - 20, ALTURA / 2 + 45 + i * 20, 18, WHITE);
             }
         }
         EndDrawing();
