@@ -565,10 +565,40 @@ Elemento *criar_obstaculo(Elemento *lista)
     return lista;
 }
 
+typedef enum { TELA_INICIAL, JOGANDO } EstadoJogo;
+
+void desenhar_tela_inicial(int scores[], int qtd)
+{
+    const char *titulo = "REBEL CHICKEN";
+    const char *aviso  = "Aperte ESPACO para iniciar";
+    const char *dica   = "Segure ESPACO para subir, solte para descer";
+
+    int larg_titulo = MeasureText(titulo, 60);
+    DrawText(titulo, (LARGURA - larg_titulo) / 2 + 3, 63, 60, BLACK);
+    DrawText(titulo, (LARGURA - larg_titulo) / 2,     60, 60, WHITE);
+
+    if ((int)(GetTime() * 2) % 2 == 0) {
+        int larg_aviso = MeasureText(aviso, 26);
+        DrawText(aviso, (LARGURA - larg_aviso) / 2 + 2, 152, 26, BLACK);
+        DrawText(aviso, (LARGURA - larg_aviso) / 2,     150, 26, YELLOW);
+    }
+
+    int larg_dica = MeasureText(dica, 18);
+    DrawText(dica, (LARGURA - larg_dica) / 2, 190, 18, DARKGRAY);
+
+    if (qtd > 0) {
+        const char *rec = TextFormat("Melhor pontuacao: %d", scores[0]);
+        int larg_rec = MeasureText(rec, 20);
+        DrawText(rec, (LARGURA - larg_rec) / 2, 230, 20, BLACK);
+    }
+}
+
 int main(void)
 {
     InitWindow(LARGURA, ALTURA, "Rebel Chicken");
     SetTargetFPS(60);
+
+    EstadoJogo estado = TELA_INICIAL;
 
     Elemento *lista = NULL;
     Rectangle galinha = { 100, 200, 36, 36 };
@@ -599,7 +629,10 @@ int main(void)
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
 
-        if (!morreu) {
+        if (estado == TELA_INICIAL) {
+            if (IsKeyPressed(KEY_SPACE)) estado = JOGANDO;
+        }
+        else if (!morreu) {
             tempo_jogado += dt;
 
             if (tempo_jogado <= 45.0f) {
@@ -706,8 +739,13 @@ int main(void)
         desenhar_lista(lista);
         if (!morreu && aviso_ativo) desenhar_alerta(faixa_y, faixa_alt, qtd_falcoes, aviso_timer);
         desenhar_galinha((int) galinha.x, (int) galinha.y);
-        DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
-        DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
+
+        if (estado == TELA_INICIAL) {
+            desenhar_tela_inicial(scores, qtd_scores);
+        } else {
+            DrawText(TextFormat("Pontos: %d", pontos), 10, 10, 24, BLACK);
+            DrawText(TextFormat("Milho: %d", milho), 10, 38, 24, BLACK);
+        }
 
         if (morreu) {
             DrawText("GAME OVER", LARGURA / 2 - 110, ALTURA / 2 - 20, 40, RED);
