@@ -328,15 +328,59 @@ int colidiu(Elemento *inicio, Rectangle galinha)
     return 0;
 }
 
-void desenhar_bloco_girado(Elemento *p)
+Vector2 ponto_arame(Vector2 centro, Vector2 d, Vector2 n, float t, float u)
+{
+    return (Vector2){ centro.x + d.x * t + n.x * u,
+                      centro.y + d.y * t + n.y * u };
+}
+
+void desenhar_arame(Elemento *p)
 {
     Rectangle c = p->caixa;
     Vector2 centro = { c.x + c.width / 2, c.y + c.height / 2 };
-    Rectangle externo = { centro.x, centro.y, c.width, c.height };
-    Rectangle interno = { centro.x, centro.y, c.width - 4, c.height - 4 };
 
-    DrawRectanglePro(externo, (Vector2){ c.width / 2, c.height / 2 }, p->angulo, BLACK);
-    DrawRectanglePro(interno, (Vector2){ (c.width - 4) / 2, (c.height - 4) / 2 }, p->angulo, DARKGRAY);
+    int em_pe = c.height > c.width;
+    float comp = em_pe ? c.height : c.width;
+    float esp  = em_pe ? c.width  : c.height;
+    float ang  = (p->angulo + (em_pe ? 90.0f : 0.0f)) * DEG2RAD;
+
+    Vector2 d = { cosf(ang), sinf(ang) };
+    Vector2 n = { -sinf(ang), cosf(ang) };
+    float m = esp / 2 - 2;
+    float passo = 18;
+
+    for (int s = -1; s <= 1; s += 2) {
+        DrawLineEx(ponto_arame(centro, d, n, s * comp / 2, -esp / 2 - 4),
+                   ponto_arame(centro, d, n, s * comp / 2,  esp / 2 + 4),
+                   6, BLACK);
+        DrawLineEx(ponto_arame(centro, d, n, s * comp / 2, -esp / 2 - 3),
+                   ponto_arame(centro, d, n, s * comp / 2,  esp / 2 + 3),
+                   3, BROWN);
+    }
+
+    for (float t = -comp / 2; t + passo / 2 <= comp / 2; t += passo) {
+        Vector2 a  = ponto_arame(centro, d, n, t,             -m);
+        Vector2 b  = ponto_arame(centro, d, n, t + passo / 2, +m);
+        Vector2 a2 = ponto_arame(centro, d, n, t + passo,     -m);
+        DrawLineEx(a, b, 2, DARKGRAY);
+        DrawLineEx(b, a2, 2, DARKGRAY);
+    }
+
+    for (int s = -1; s <= 1; s += 2) {
+        Vector2 ini = ponto_arame(centro, d, n, -comp / 2, s * m);
+        Vector2 fim = ponto_arame(centro, d, n,  comp / 2, s * m);
+        DrawLineEx(ini, fim, 5, BLACK);
+        DrawLineEx(ini, fim, 3, LIGHTGRAY);
+    }
+
+    for (float t = -comp / 2 + passo / 2; t < comp / 2 - 4; t += passo) {
+        for (int s = -1; s <= 1; s += 2) {
+            DrawLineEx(ponto_arame(centro, d, n, t - 5, s * m - 5),
+                       ponto_arame(centro, d, n, t + 5, s * m + 5), 2, RED);
+            DrawLineEx(ponto_arame(centro, d, n, t - 5, s * m + 5),
+                       ponto_arame(centro, d, n, t + 5, s * m - 5), 2, RED);
+        }
+    }
 }
 
 void desenhar_lista(Elemento *inicio)
@@ -344,11 +388,8 @@ void desenhar_lista(Elemento *inicio)
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
         if (p->tipo == MILHO) {
             desenhar_milho(p->caixa);
-        } else if (p->tipo == OBS_INCLINADO || p->tipo == OBS_GIRATORIO) {
-            desenhar_bloco_girado(p);
         } else if (p->tipo != FALCAO) {
-            DrawRectangleRec(p->caixa, DARKGRAY);
-            DrawRectangleLinesEx(p->caixa, 2, BLACK);
+            desenhar_arame(p);
         }
     }
     for (Elemento *p = inicio; p != NULL; p = p->prox) {
