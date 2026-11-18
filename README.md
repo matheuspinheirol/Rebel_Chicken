@@ -2,7 +2,7 @@
 
 ***Rebel Chicken*** é um jogo programado em C a partir da biblioteca raylib. 
 
-O tema central do jogo é a fuga de uma galinha de uma fazenda, contendo obstáculos que vão aumentando sua dificuldade ao longo do tempo.
+Você é uma galinha insatisfeita com sua vida na fazenda. Desvie dos obstáculos para se afastar o máximo possível do cativeiro, mas cuidado: A sua ansiedade te torna cada vez mais rápido e suscetível a colidir e ser capturado.
 
 ## Características
 * **Fácil de Aprender:** O jogo apresenta apenas um comando simples (Espaço para Subir).
