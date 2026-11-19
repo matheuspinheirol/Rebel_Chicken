@@ -690,6 +690,12 @@ int main(void)
     InitWindow(LARGURA, ALTURA, "Rebel Chicken");
     SetTargetFPS(60);
 
+    InitAudioDevice();
+    Music trilha = LoadMusicStream("assets/musica.mp3");
+    trilha.looping = true;
+    SetMusicVolume(trilha, 0.5f);
+    PlayMusicStream(trilha);
+
     EstadoJogo estado = TELA_INICIAL;
 
     Elemento *lista = NULL;
@@ -720,6 +726,8 @@ int main(void)
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
+        UpdateMusicStream(trilha);
+
 
         if (estado == TELA_INICIAL) {
             if (IsKeyPressed(KEY_SPACE)) estado = JOGANDO;
@@ -795,9 +803,11 @@ int main(void)
 
             if (morreu) {
                 registrar_score(scores, &qtd_scores, pontos);
+                StopMusicStream(trilha);
             }
         }
         else if (IsKeyPressed(KEY_R)) {
+            SeekMusicStream(trilha, 0.0f);
             lista = liberar_lista(lista);
             galinha.y = 200;
             vel_y = 0;
@@ -814,6 +824,7 @@ int main(void)
             intervalo_falcao = 3.2f;
             aviso_ativo = 0;
             aviso_timer = 0;
+            PlayMusicStream(trilha);
         }
 
         BeginDrawing();
@@ -846,6 +857,8 @@ int main(void)
     }
 
     lista = liberar_lista(lista);
+    UnloadMusicStream(trilha);
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
