@@ -67,3 +67,4 @@ No Windows, também é possível compilar com `make` e depois abrir o `rebel_chi
 - Colete o milho para ganhar pontos (`+10` por milho).
 - Desvie do arame farpado e dos falcões.
 - Sobreviva o máximo que conseguir: a dificuldade aumenta com o tempo.
+- 
