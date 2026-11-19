@@ -237,9 +237,19 @@ void desenhar_nuvem(float x, float y, float e)
     DrawCircle((int)(x + 30 * e),    (int)(y + 8 * e),     25 * e, branco);
 }
 
+void desenhar_sol(float cx, float cy)
+{
+    float t = (float) GetTime();
+
+    DrawCircle((int) cx, (int) cy, 56, Fade(YELLOW, 0.20f));
+    DrawCircle((int) cx, (int) cy, 36, GOLD);
+    DrawCircle((int) cx, (int) cy, 32, YELLOW);
+}
+
 void desenhar_cenario(float deslocamento)
 {
     ClearBackground(SKYBLUE);
+    desenhar_sol(690, 75);
 
     for (int i = 0; i < QTD_NUVENS; i++) {
         float x = posicao_loop(nuvem_x[i], deslocamento, 0.05f, 150);
