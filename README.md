@@ -12,7 +12,7 @@ Você é uma galinha insatisfeita com sua vida na fazenda. Desvie dos obstáculo
 
 ## Software e Bibliotecas Utilizados
 - **C:** Linguagem utilizada para a definição de constantes, construção de structs, funções e a lógica geral do jogo.
-- ***raylib:*** Biblioteca usada para a construção da interface jogável e leitura de comandos do usuário.
+- **raylib:** Biblioteca usada para a construção da interface jogável e leitura de comandos do usuário.
 
 ## Instruções de Instalação
 Pré-requisitos: GCC, Make, Git e a biblioteca raylib.
