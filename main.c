@@ -42,6 +42,27 @@
 
 #define QTD_NUVENS 5
 
+typedef enum {
+    OBSTACULO,
+    OBS_HORIZONTAL,
+    OBS_INCLINADO,
+    OBS_GIRATORIO,
+    MILHO,
+    FALCAO
+} TipoElemento;
+
+typedef struct Elemento {
+    TipoElemento tipo;
+    Rectangle caixa;
+    float angulo;
+    struct Elemento *prox;
+} Elemento;
+
+typedef enum {
+    TELA_INICIAL,
+    JOGANDO
+} EstadoJogo;
+
 const float nuvem_x[QTD_NUVENS]   = { 80, 280, 480, 700, 900 };
 const float nuvem_y[QTD_NUVENS]   = { 60, 120,  45, 100, 150 };
 const float nuvem_esc[QTD_NUVENS] = { 1.0f, 0.7f, 1.3f, 0.9f, 0.8f };
@@ -239,8 +260,6 @@ void desenhar_nuvem(float x, float y, float e)
 
 void desenhar_sol(float cx, float cy)
 {
-    float t = (float) GetTime();
-
     DrawCircle((int) cx, (int) cy, 56, Fade(YELLOW, 0.20f));
     DrawCircle((int) cx, (int) cy, 36, GOLD);
     DrawCircle((int) cx, (int) cy, 32, YELLOW);
@@ -274,16 +293,6 @@ void desenhar_cenario(float deslocamento)
         DrawRectangle(i * 100 - desloc_cerca, CHAO_Y - 25, 8, 25, DARKBROWN);
     }
 }
-
-typedef enum { OBSTACULO, OBS_HORIZONTAL, OBS_INCLINADO, OBS_GIRATORIO,
-               MILHO, FALCAO } TipoElemento;
-
-typedef struct Elemento {
-    TipoElemento tipo;
-    Rectangle caixa;
-    float angulo;
-    struct Elemento *prox;
-} Elemento;
 
 Elemento *inserir(Elemento *inicio, float x, float y, float larg, float alt)
 {
@@ -650,8 +659,6 @@ Elemento *criar_obstaculo(Elemento *lista)
     return lista;
 }
 
-typedef enum { TELA_INICIAL, JOGANDO } EstadoJogo;
-
 void desenhar_tela_inicial(int scores[], int qtd)
 {
     const char *titulo = "REBEL CHICKEN";
@@ -741,7 +748,6 @@ int main(void)
             }
 
             deslocamento += vel_cenario * dt;
-            pontos = (int)(deslocamento / 100) + milho * PONTOS_POR_MILHO;
             timer += dt;
 
             if (timer >= 1.6f) {
@@ -784,9 +790,8 @@ int main(void)
             lista = atualizar(lista, dt, vel_cenario);
             morreu = colidiu(lista, galinha);
 
-            int antes = milho;
             lista = coletar_milho(lista, galinha, &milho);
-            pontos += (milho - antes) * PONTOS_POR_MILHO;
+            pontos = (int)(deslocamento / 100) + milho * PONTOS_POR_MILHO;
 
             if (morreu) {
                 registrar_score(scores, &qtd_scores, pontos);
