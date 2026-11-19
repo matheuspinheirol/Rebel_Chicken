@@ -40,6 +40,12 @@
 #define QTD_ARVORES  3
 #define PERIODO      1000
 
+#define QTD_NUVENS 5
+
+const float nuvem_x[QTD_NUVENS]   = { 80, 280, 480, 700, 900 };
+const float nuvem_y[QTD_NUVENS]   = { 60, 120,  45, 100, 150 };
+const float nuvem_esc[QTD_NUVENS] = { 1.0f, 0.7f, 1.3f, 0.9f, 0.8f };
+
 const float arvore_x[QTD_ARVORES]   = { 100, 450, 780 };
 const float arvore_esc[QTD_ARVORES] = { 1.0f, 0.8f, 1.2f };
 
@@ -221,9 +227,24 @@ void desenhar_arvore(float x, float base, float e)
     DrawCircle((int) x,           (int)(base - 64 * e), 28 * e, GREEN);
 }
 
+void desenhar_nuvem(float x, float y, float e)
+{
+    Color branco = (Color){ 255, 255, 255, 255 };
+
+    DrawCircle((int) x,              (int) y,              25 * e, branco);
+    DrawCircle((int)(x + 30 * e),    (int)(y - 15 * e),    30 * e, branco);
+    DrawCircle((int)(x + 65 * e),    (int) y,              25 * e, branco);
+    DrawCircle((int)(x + 30 * e),    (int)(y + 8 * e),     25 * e, branco);
+}
+
 void desenhar_cenario(float deslocamento)
 {
     ClearBackground(SKYBLUE);
+
+    for (int i = 0; i < QTD_NUVENS; i++) {
+        float x = posicao_loop(nuvem_x[i], deslocamento, 0.05f, 150);
+        desenhar_nuvem(x, nuvem_y[i], nuvem_esc[i]);
+    }
 
     desenhar_colinas(deslocamento, 0.10f, 420, 270, 85, (Color){ 150, 210, 150, 255 });
     desenhar_colinas(deslocamento, 0.25f, 300, 200, 55, (Color){ 100, 180, 100, 255 });
