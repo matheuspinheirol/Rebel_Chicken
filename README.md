@@ -24,7 +24,7 @@ Pré-requisitos: GCC, Make, Git e a biblioteca raylib.
 
 2. Acesse a pasta inserindo no terminal:
    ```bash
-   cd Rebel_Chicken
+   cd rebel-chicken
    ```
 
 3. Instale a biblioteca raylib:
