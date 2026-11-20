@@ -15,32 +15,27 @@ Você é uma galinha insatisfeita com sua vida na fazenda. Desvie dos obstáculo
 - **raylib:** Biblioteca usada para a construção da interface jogável e leitura de comandos do usuário.
 
 ## Instruções de Instalação
-Pré-requisitos: GCC, Make, Git e a biblioteca raylib.
 
-1. Clone o repositório:
-   ```bash
-   git clone [https://github.com/matheuspinheirol/Rebel_Chicken.git](https://github.com/matheuspinheirol/Rebel_Chicken.git)
-   ```
+Pré-requisitos: GCC, Make e a biblioteca raylib.
 
-2. Acesse a pasta inserindo no terminal:
-   ```bash
-   cd rebel-chicken
-   ```
+1. Baixe o código do projeto clicando no botão verde **Code** no topo desta página e selecionando **Download ZIP**.
+2. Extraia o arquivo `.zip` baixado e abra o terminal dentro da pasta extraída (`rebel-chicken-main`).
+3. Instale o compilador e a biblioteca raylib de acordo com o seu sistema:
 
-3. Instale a biblioteca raylib:
-   - **Windows:** instale o [instalador oficial da raylib](https://www.raylib.com/) (inclui GCC e Make) e garanta que o código-fonte da raylib esteja em `C:/raylib/raylib/src`, pois é o caminho usado no `Makefile`. Se a sua instalação estiver em outra pasta, altere os caminhos `-I` e `-L` na regra `all` do `Makefile`.
-   - **macOS (Homebrew):**
+   * **Windows:** instale o [instalador oficial da raylib](https://www.raylib.com/) (inclui GCC e Make) e garanta que o código-fonte da raylib esteja em `C:/raylib/raylib/src`, pois é o caminho usado no `Makefile`. Se a sua instalação estiver em outra pasta, altere os caminhos `-I` e `-L` na regra `all` do `Makefile`.
+   * **macOS (Homebrew):**
      ```bash
+     xcode-select --install
      brew install raylib
      ```
-   - **Linux (Debian/Ubuntu):**
+   * **Linux (Debian/Ubuntu):**
      ```bash
-     sudo apt install build-essential git libraylib-dev
+     sudo apt update && sudo apt install build-essential libraylib-dev
      ```
      Se o pacote não estiver disponível na sua distribuição, siga o [guia oficial de compilação da raylib](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux).
-   - **Linux (Fedora):**
+   * **Linux (Fedora):**
      ```bash
-     sudo dnf install gcc make git raylib-devel mesa-libGL-devel libX11-devel
+     sudo dnf install gcc make raylib-devel mesa-libGL-devel libX11-devel
      ```
 
 ## Instruções de Uso
