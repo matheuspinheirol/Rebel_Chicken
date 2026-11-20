@@ -4,6 +4,12 @@
 
 Você é uma galinha insatisfeita com sua vida na fazenda. Desvie dos obstáculos para se afastar o máximo possível do cativeiro, mas cuidado: a sua ansiedade te torna cada vez mais rápido e suscetível a colidir e ser capturado.
 
+## Gameplay
+
+Confira o vídeo abaixo para conhecer a jogabilidade e as mecânicas do Rebel Chicken:
+
+[▶️ Assistir ao gameplay do Rebel Chicken](https://youtu.be/94UYc9B4Eto)
+
 ## Características
 - **Fácil de Aprender:** O jogo apresenta apenas um comando simples (`Espaço` para subir).
 - **Faixa Etária Abrangente:** _Rebel Chicken_ é recomendado e jogável por jogadores de todas as idades.
